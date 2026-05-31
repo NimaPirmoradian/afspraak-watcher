@@ -65,35 +65,6 @@ git push
 
 This happens occasionally with the Windows-mounted filesystem; the working tree is fine, only the index needs rebuilding.
 
-#### If the index keeps re-corrupting on the mounted folder
-
-Sometimes — especially when doing `git update-index --refresh` or making small changes to one file — the index repeatedly corrupts on the Windows mount, making it impossible to produce a clean commit. The fix is to do git ops in a temp clone on the Linux filesystem instead:
-
-```bash
-# Extract the embedded PAT from the user's existing clone
-PAT=$(cd /sessions/<session>/mnt/afspraak-watcher && \
-      git remote get-url origin | sed -E 's|.*x-access-token:([^@]+)@.*|\1|')
-
-# Fresh clone into /tmp (Linux fs, no Windows-mount weirdness)
-cd /tmp && rm -rf aw-tmp
-git clone "https://x-access-token:${PAT}@github.com/NimaPirmoradian/afspraak-watcher.git" aw-tmp
-cd aw-tmp
-
-# Apply your changes here using sed/Edit/etc.
-
-git config user.email "piremorad@gmail.com"
-git config user.name "Nima Pirmoradian"
-git add -A && git commit -m "..." && git push
-
-# Then sync the user's mounted clone so it doesn't diverge
-cd /sessions/<session>/mnt/afspraak-watcher
-rm -f .git/index .git/index.lock
-git reset --hard HEAD
-git pull origin main
-```
-
-Use this temp-clone path proactively for small, targeted edits — it's much more reliable than fighting the Windows-mount index issues.
-
 ### File deletion
 
 Deleting files in the mounted folder requires explicit per-session permission:
@@ -110,4 +81,34 @@ call mcp__cowork__allow_cowork_file_delete with the file path
 
 `api.github.com` is **blocked** by the sandbox proxy (only `github.com` for git operations is allowed). So you cannot programmatically trigger workflow_dispatch via REST API.
 
-**Workaro
+**Workaround**: just tell the user "go to Actions tab → Run workflow" (one click), or rely on the 10-min cron picking up changes.
+
+---
+
+## User context (Nima)
+
+- Prefers concise responses in Persian/Farsi
+- Prefers zero manual work
+- Has GitHub Desktop installed at `C:\Users\npirm\Documents\GitHub\afspraak-watcher\`
+- Telegram bot `8247214633` (token in GitHub Secrets), chat_id `108046309`
+- Current booking: 9 June 2026 (used as default deadline)
+
+---
+
+## How to start a new Claude session quickly
+
+In the user's first message, they should say:
+> "Mount my afspraak-watcher folder at `C:\Users\npirm\Documents\GitHub\afspraak-watcher`"
+
+Then you (Claude) do:
+1. `mcp__cowork__request_cowork_directory` with that path
+2. Read `CLAUDE.md` (this file) — you now have full context
+3. Make changes, commit, push, all automatically
+
+If the PAT has expired (push returns 403), tell the user:
+> "PAT expired. Generate a new fine-grained PAT at https://github.com/settings/personal-access-tokens/new (scope: Contents R/W + Workflows R/W on this repo only), and paste it in chat or save to a file."
+
+Then update the remote URL:
+```bash
+git remote set-url origin "https://x-access-token:NEWTOKEN@github.com/NimaPirmoradian/afspraak-watcher.git"
+```
