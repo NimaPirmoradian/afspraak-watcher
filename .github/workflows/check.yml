@@ -2,9 +2,11 @@ name: Check appointments
 
 on:
   schedule:
-    # Every 10 minutes. NOTE: GitHub Actions cron is best-effort; actual runs
-    # may be delayed by 5-30 minutes during high load.
-    - cron: "*/10 * * * *"
+    # Every 10 minutes, offset by 3 to dodge the top-of-hour rush.
+    # GitHub explicitly warns scheduled workflows are most delayed around the
+    # start of every hour (peak load); offsetting helps materially.
+    # Fires at :03, :13, :23, :33, :43, :53.
+    - cron: "3-59/10 * * * *"
   workflow_dispatch:
     inputs:
       only:
