@@ -1,0 +1,34 @@
+# =============================================================================
+# Ridderkerk - Rijbewijs aanvragen/verlengen
+# =============================================================================
+# PURE site definition: how to navigate and extract the date.
+# User-controllable settings (active flag, deadline) live in state — set them
+# via Telegram commands (/watch, /deadline, /pause, /booked).
+
+name: "Ridderkerk Rijbewijs"
+url: "https://ridderkerk.mijnafspraakmaken.nl/?product=49"
+
+max_retries: 3
+
+# Browser navigation steps (executed in order)
+steps:
+  - action: goto
+    wait_until: domcontentloaded
+    timeout: 60000
+  - action: wait
+    duration: 2000
+  - action: click
+    selector: "button:has-text('Ga naar stap 2')"
+    timeout: 15000
+  - action: wait_load
+  - action: click
+    selector: "button:has-text('Ga naar stap 3')"
+    timeout: 15000
+  - action: wait_load
+  - action: wait
+    duration: 3000
+
+# Extraction strategies (tried in order; first match wins)
+extract:
+  - type: input_dutch_date
+  - type: text_regex_dutch_date

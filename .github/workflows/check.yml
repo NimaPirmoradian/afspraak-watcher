@@ -1,0 +1,69 @@
+name: Check appointments
+
+on:
+  schedule:
+    # Every 10 minutes. NOTE: GitHub Actions cron is best-effort; actual runs
+    # may be delayed by 5-30 minutes during high load.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Only check specific sites (comma-separated). Empty = all active."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: check-appointments
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run main
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -n "${{ inputs.only }}" ]; then
+            python main.py --only $(echo "${{ inputs.only }}" | tr ',' ' ')
+          else
+            python main.py
+          fi
+
+      - name: Commit state changes
+        if: always()
+        run: |
+          git config user.name  "afspraak-watcher[bot]"
+          git config user.email "afspraak-watcher@users.noreply.github.com"
+          if [ -n "$(git status --porcelain state/)" ]; then
+            git add state/
+            git commit -m "state: update [skip ci]" || true
+            for i in 1 2 3; do
+              git pull --rebase origin "${GITHUB_REF_NAME}" && git push && break
+              sleep $((i * 3))
+            done
+          else
+            echo "No state changes to commit."
+          fi
