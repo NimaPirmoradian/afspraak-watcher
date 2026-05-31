@@ -186,11 +186,11 @@ def _build_notification_keyboard(site_id: str, url: str) -> dict:
     return {
         "inline_keyboard": [
             [
-                {"text": "🌐 برو به سایت", "url": url},
-                {"text": "✅ گرفتم", "callback_data": f"pause:{site_id}"},
+                {"text": "🔗 صفحه بوکینگ", "url": url},
+                {"text": "✅ قرار گرفتم", "callback_data": f"pause:{site_id}"},
             ],
             [
-                {"text": "🔄 الان دوباره چک کن", "callback_data": f"check:{site_id}"},
+                {"text": "🔄 دوباره چک کن", "callback_data": f"check:{site_id}"},
             ],
         ]
     }
@@ -224,21 +224,22 @@ def _should_notify(state: SiteState, found: date) -> tuple[bool, str]:
 def _build_message(site: SiteConfig, found: date, state: SiteState, reason: str) -> str:
     if reason == "baseline":
         text = (
-            f"🎯 <b>{site.name}</b>\n"
-            f"اولین تاریخ آزاد: <b>{format_dutch_date(found)}</b>\n"
+            f"👀 شروع کردم چک کردن <b>{site.name}</b>.\n\n"
+            f"اولین تاریخی که الان آزاده: <b>{format_dutch_date(found)}</b>"
         )
         if state.deadline_override:
-            text += f"تاریخ سقف: {format_dutch_date(state.deadline_override)}\n"
-        text += "\nاز این به بعد اگه تاریخ زودتری پیدا کنم خبر می‌دم."
+            text += f"\nفقط تا <b>{format_dutch_date(state.deadline_override)}</b> رو نگاه می‌کنم."
+        text += "\n\nاز این به بعد فقط اگه تاریخ زودتری ببینم خبرت می‌کنم."
         return text
 
     # improvement
     prev = state.last_notified_date
     return (
-        f"📅 <b>تاریخ زودتر پیدا شد!</b>\n\n"
+        f"🎉 <b>یه تاریخ زودتر پیدا کردم!</b>\n\n"
         f"📍 <b>{site.name}</b>\n"
         f"📅 جدید: <b>{format_dutch_date(found)}</b>\n"
-        f"📆 قبلی: {format_dutch_date(prev) if prev else '—'}"
+        f"قبلاً: {format_dutch_date(prev) if prev else '—'}\n\n"
+        f"سریع برو بگیر 🏃"
     )
 
 
@@ -269,7 +270,7 @@ async def check_and_notify(site: SiteConfig) -> None:
         # Notify rarely so the user knows something is broken — but not on every cron tick
         if state.consecutive_failures in (10, 50, 200):
             send_message(
-                f"⚠️ <b>{site.name}</b>: {state.consecutive_failures} chek پشت سر هم خراب شد.\n"
+                f"⚠️ <b>{site.name}</b>: {state.consecutive_failures} بار پشت سر هم نتونستم چک کنم.\n"
                 f"<code>{result[:300]}</code>"
             )
         save_site_state(site.site_id, state)
