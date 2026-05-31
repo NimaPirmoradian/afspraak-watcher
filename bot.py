@@ -42,19 +42,19 @@ ALLOWED_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 # -----------------------------------------------------------------------------
 
 HELP_TEXT = (
-    "<b>چی بلدم:</b>\n\n"
-    "📋 /list — همه سایت‌ها رو نشون می‌دم\n"
-    "ℹ️ /info <code>&lt;site&gt;</code> — جزئیات یکی‌شون\n\n"
-    "👀 /watch <code>&lt;site&gt;</code> — شروع کن گشتن\n"
-    "✅ /booked <code>&lt;site&gt;</code> — قرار گرفتم، تموم کن\n"
-    "⏸ /pause <code>&lt;site&gt;</code> — موقتاً بخواب\n"
-    "▶️ /resume <code>&lt;site&gt;</code> — بیدار شو\n\n"
-    "📅 /deadline <code>&lt;site&gt; &lt;YYYY-MM-DD&gt;</code> — فقط تا این تاریخ بهم خبر بده\n"
-    "🗑 /deadline <code>&lt;site&gt; clear</code> — اون محدودیت رو پاک کن\n\n"
-    "🔄 /check <code>&lt;site&gt;</code> — همین حالا یه چک کن\n"
-    "❔ /help — همین راهنما\n\n"
-    "💡 می‌خوای سایت جدیدی اضافه کنی؟ یه چت با Claude باز کن، "
-    "آدرس ریپوی این پروژه رو بده. خودش بلده."
+    "<b>دستورات</b>\n\n"
+    "/list — لیست همه سایت‌ها و وضعیتشون\n"
+    "/info <code>&lt;site&gt;</code> — جزئیات یک سایت\n\n"
+    "/watch <code>&lt;site&gt;</code> — شروع چک کردن\n"
+    "/pause <code>&lt;site&gt;</code> — توقف موقت (با /resume برمی‌گرده)\n"
+    "/resume <code>&lt;site&gt;</code> — ادامه چک کردن\n"
+    "/booked <code>&lt;site&gt;</code> — قرار رو گرفتم، خاموش کن\n\n"
+    "/deadline <code>&lt;site&gt; &lt;YYYY-MM-DD&gt;</code> — تاریخ سقف برای notif\n"
+    "/deadline <code>&lt;site&gt; clear</code> — حذف تاریخ سقف\n\n"
+    "/check <code>&lt;site&gt;</code> — درخواست چک فوری در ران بعدی\n\n"
+    "/help — همین راهنما\n\n"
+    "💡 برای اضافه‌کردن سایت جدید، یک چت با AI باز کن و آدرس "
+    "گیت‌هاب پروژه + URL سایت جدید رو بده."
 )
 
 
@@ -69,10 +69,10 @@ def _is_authorized(chat_id: int | str) -> bool:
 def _site_or_reply(site_id: str, chat_id: int) -> SiteConfig | None:
     cfg = load_site(site_id)
     if cfg is None:
-        all_ids = ", ".join(list_sites().keys()) or "(هنوز هیچ سایتی نیست)"
+        all_ids = ", ".join(list_sites().keys()) or "(هیچی نیست)"
         send_message(
-            f"🤔 سایتی به اسم <code>{site_id}</code> نمی‌شناسم.\n"
-            f"اینا رو دارم: <code>{all_ids}</code>",
+            f"❓ سایتی به اسم <code>{site_id}</code> پیدا نشد.\n"
+            f"موجود: <code>{all_ids}</code>",
             chat_id=chat_id,
         )
         return None
@@ -84,14 +84,13 @@ def _status_emoji(state: SiteState) -> str:
 
 
 def _format_state_line(site_id: str, cfg: SiteConfig, state: SiteState) -> str:
-    status = "فعال" if state.active else "خوابیده"
-    parts = [f"{_status_emoji(state)} <b>{site_id}</b> — {cfg.name} ({status})"]
+    parts = [f"{_status_emoji(state)} <b>{site_id}</b> — {cfg.name}"]
     if state.last_seen_date:
-        parts.append(f"   آخرین تاریخی که دیدم: {format_dutch_date(state.last_seen_date)}")
+        parts.append(f"   آخرین تاریخ پیداشده: {format_dutch_date(state.last_seen_date)}")
     if state.deadline_override:
-        parts.append(f"   فقط تا: {format_dutch_date(state.deadline_override)}")
+        parts.append(f"   تاریخ سقف: {format_dutch_date(state.deadline_override)}")
     if state.consecutive_failures > 0:
-        parts.append(f"   ⚠️ {state.consecutive_failures} بار پشت سر هم نتونستم چک کنم")
+        parts.append(f"   ⚠️ {state.consecutive_failures} fail پشت سر هم")
     return "\n".join(parts)
 
 
@@ -101,10 +100,8 @@ def _format_state_line(site_id: str, cfg: SiteConfig, state: SiteState) -> str:
 
 def cmd_start(chat_id: int, args: list[str]) -> None:
     send_message(
-        "👋 سلام نیما!\n\n"
-        "من می‌گردم دنبال وقت‌های زودتر برای قرارهای شهرداری و هر وقت چیزی بهتر "
-        "پیدا کنم بهت خبر می‌دم.\n\n"
-        "بزن /help تا ببینی چی بلدم.",
+        "👋 سلام Nima!\n\n"
+        "این بات وقت‌های آزاد رو برات چک میکنه. /help برای دیدن دستورات.",
         chat_id=chat_id,
     )
 
@@ -116,21 +113,19 @@ def cmd_help(chat_id: int, args: list[str]) -> None:
 def cmd_list(chat_id: int, args: list[str]) -> None:
     sites = list_sites()
     if not sites:
-        send_message(
-            "هنوز هیچ سایتی برام تعریف نشده. اول باید یه YAML توی پوشه sites/ اضافه بشه.",
-            chat_id=chat_id,
-        )
+        send_message("هیچ سایتی تعریف نشده. اول یه YAML در پوشه sites/ اضافه کن.", chat_id=chat_id)
         return
-    lines = ["<b>سایت‌هایی که می‌شناسم:</b>\n"]
+    lines = ["<b>سایت‌ها:</b>\n"]
     for site_id, cfg in sites.items():
         state = load_site_state(site_id)
         lines.append(_format_state_line(site_id, cfg, state))
+    lines.append("\n🟢 = active · ⚪ = paused")
     send_message("\n".join(lines), chat_id=chat_id)
 
 
 def cmd_info(chat_id: int, args: list[str]) -> None:
     if not args:
-        send_message("اینجوری بزن: <code>/info &lt;site&gt;</code>", chat_id=chat_id)
+        send_message("استفاده: <code>/info &lt;site&gt;</code>", chat_id=chat_id)
         return
     cfg = _site_or_reply(args[0], chat_id)
     if cfg is None:
@@ -138,21 +133,21 @@ def cmd_info(chat_id: int, args: list[str]) -> None:
     state = load_site_state(cfg.site_id)
     lines = [
         f"<b>{cfg.name}</b>",
-        f"شناسه: <code>{cfg.site_id}</code>",
-        f"وضعیت: {'🟢 فعال' if state.active else '⚪ خوابیده'}",
-        f"آدرس: {cfg.url}",
+        f"site_id: <code>{cfg.site_id}</code>",
+        f"وضعیت: {'🟢 active' if state.active else '⚪ paused'}",
+        f"URL: {cfg.url}",
         f"آخرین چک: {state.last_check_utc or '—'} UTC",
-        f"آخرین تاریخی که دیدم: {format_dutch_date(state.last_seen_date) if state.last_seen_date else '—'}",
-        f"آخرین تاریخی که خبرت کردم: {format_dutch_date(state.last_notified_date) if state.last_notified_date else '—'}",
-        f"حداکثر تاریخ قابل قبول: {format_dutch_date(state.deadline_override) if state.deadline_override else 'هرچی'}",
-        f"خطاهای پشت سر هم: {state.consecutive_failures}",
+        f"آخرین تاریخ پیداشده: {format_dutch_date(state.last_seen_date) if state.last_seen_date else '—'}",
+        f"آخرین تاریخ نوتیف‌شده: {format_dutch_date(state.last_notified_date) if state.last_notified_date else '—'}",
+        f"تاریخ سقف: {format_dutch_date(state.deadline_override) if state.deadline_override else '—'}",
+        f"failure پشت سر هم: {state.consecutive_failures}",
     ]
     send_message("\n".join(lines), chat_id=chat_id, disable_preview=True)
 
 
 def cmd_watch(chat_id: int, args: list[str]) -> None:
     if not args:
-        send_message("اینجوری بزن: <code>/watch &lt;site&gt;</code>", chat_id=chat_id)
+        send_message("استفاده: <code>/watch &lt;site&gt;</code>", chat_id=chat_id)
         return
     cfg = _site_or_reply(args[0], chat_id)
     if cfg is None:
@@ -164,24 +159,20 @@ def cmd_watch(chat_id: int, args: list[str]) -> None:
     state.first_notification_sent = False
     state.last_notified_date = None
     save_site_state(cfg.site_id, state)
-    verb = "از سر گرفتم" if was_active else "شروع کردم"
     msg = (
-        f"👀 باشه، {verb} گشتن دنبال وقت برای <b>{cfg.name}</b>.\n\n"
-        f"تا چند دقیقه دیگه (وقتی ران بعدی اجرا شد) اولین تاریخی که الان آزاده رو می‌فرستم بهت."
+        f"{'✅ از سر گرفته شد' if was_active else '✅ شروع شد'} چک کردن <b>{cfg.name}</b>.\n"
+        f"در ران بعدی (تا ~۱۰ دقیقه دیگه) اولین تاریخ آزاد رو می‌فرستم."
     )
     if state.deadline_override:
-        msg += f"\n\nفعلاً فقط تا <b>{format_dutch_date(state.deadline_override)}</b> رو نگاه می‌کنم."
+        msg += f"\nتاریخ سقف فعلی: <b>{format_dutch_date(state.deadline_override)}</b>"
     else:
-        msg += (
-            f"\n\nاگه می‌خوای فقط برای تاریخ‌های خاصی خبرت کنم: "
-            f"<code>/deadline {cfg.site_id} 2026-06-09</code>"
-        )
+        msg += "\n\nاگه می‌خوای تاریخ سقف تنظیم کنی: <code>/deadline " + cfg.site_id + " 2026-06-09</code>"
     send_message(msg, chat_id=chat_id)
 
 
 def cmd_pause(chat_id: int, args: list[str]) -> None:
     if not args:
-        send_message("اینجوری بزن: <code>/pause &lt;site&gt;</code>", chat_id=chat_id)
+        send_message("استفاده: <code>/pause &lt;site&gt;</code>", chat_id=chat_id)
         return
     cfg = _site_or_reply(args[0], chat_id)
     if cfg is None:
@@ -190,8 +181,8 @@ def cmd_pause(chat_id: int, args: list[str]) -> None:
     state.active = False
     save_site_state(cfg.site_id, state)
     send_message(
-        f"⏸ موقتاً خوابوندمش — <b>{cfg.name}</b>.\n"
-        f"هر وقت خواستی دوباره بیدارش کنم: <code>/resume {cfg.site_id}</code>",
+        f"⏸ پاوز شد <b>{cfg.name}</b>.\n"
+        f"برای ادامه: <code>/resume {cfg.site_id}</code>",
         chat_id=chat_id,
     )
 
@@ -204,20 +195,20 @@ def cmd_resume(chat_id: int, args: list[str]) -> None:
 def cmd_booked(chat_id: int, args: list[str]) -> None:
     """Ask for confirmation before pausing."""
     if not args:
-        send_message("اینجوری بزن: <code>/booked &lt;site&gt;</code>", chat_id=chat_id)
+        send_message("استفاده: <code>/booked &lt;site&gt;</code>", chat_id=chat_id)
         return
     cfg = _site_or_reply(args[0], chat_id)
     if cfg is None:
         return
     keyboard = {
         "inline_keyboard": [[
-            {"text": "✅ آره، تموم", "callback_data": f"pause_yes:{cfg.site_id}"},
-            {"text": "↩ نه، ادامه بده", "callback_data": f"pause_no:{cfg.site_id}"},
+            {"text": "✅ بله، خاموش کن", "callback_data": f"pause_yes:{cfg.site_id}"},
+            {"text": "❌ خیر، ادامه بده", "callback_data": f"pause_no:{cfg.site_id}"},
         ]]
     }
     send_message(
-        f"🤔 پس قرار <b>{cfg.name}</b> رو گرفتی؟\n"
-        f"اگه آره، دیگه چکش نمی‌کنم.",
+        f"❓ مطمئنی قرار <b>{cfg.name}</b> رو گرفتی؟\n"
+        f"این کار چک خودکار رو متوقف میکنه.",
         chat_id=chat_id,
         reply_markup=keyboard,
     )
@@ -226,8 +217,8 @@ def cmd_booked(chat_id: int, args: list[str]) -> None:
 def cmd_deadline(chat_id: int, args: list[str]) -> None:
     if len(args) < 2:
         send_message(
-            "اینجوری بزن: <code>/deadline &lt;site&gt; &lt;YYYY-MM-DD&gt;</code>\n"
-            "یا برای پاک کردن: <code>/deadline &lt;site&gt; clear</code>",
+            "استفاده: <code>/deadline &lt;site&gt; &lt;YYYY-MM-DD&gt;</code>\n"
+            "یا برای پاک‌کردن: <code>/deadline &lt;site&gt; clear</code>",
             chat_id=chat_id,
         )
         return
@@ -238,18 +229,13 @@ def cmd_deadline(chat_id: int, args: list[str]) -> None:
     if args[1].lower() in ("clear", "none", "off", "remove"):
         state.deadline_override = None
         save_site_state(cfg.site_id, state)
-        send_message(
-            f"🗑 محدودیت تاریخ <b>{cfg.name}</b> رو برداشتم.\n"
-            f"از این به بعد هر تاریخی زودتر باشه خبرت می‌کنم.",
-            chat_id=chat_id,
-        )
+        send_message(f"🗑 تاریخ سقف <b>{cfg.name}</b> پاک شد.", chat_id=chat_id)
         return
     try:
         new_deadline = date.fromisoformat(args[1])
     except ValueError:
         send_message(
-            f"🤔 تاریخ <code>{args[1]}</code> رو نمی‌فهمم. باید این شکلی باشه: YYYY-MM-DD\n"
-            f"مثلاً: <code>2026-06-09</code>",
+            f"❌ تاریخ <code>{args[1]}</code> نامعتبره. فرمت: YYYY-MM-DD (مثلاً 2026-06-09)",
             chat_id=chat_id,
         )
         return
@@ -259,15 +245,15 @@ def cmd_deadline(chat_id: int, args: list[str]) -> None:
     state.first_notification_sent = False
     save_site_state(cfg.site_id, state)
     send_message(
-        f"✅ باشه! برای <b>{cfg.name}</b> فقط تا <b>{format_dutch_date(new_deadline)}</b> رو نگاه می‌کنم.\n\n"
-        f"تو ران بعدی وضعیت فعلی رو دوباره می‌فرستم.",
+        f"✅ تاریخ سقف <b>{cfg.name}</b> روی <b>{format_dutch_date(new_deadline)}</b> تنظیم شد.\n"
+        f"در ران بعدی وضعیت فعلی رو دوباره گزارش می‌دم.",
         chat_id=chat_id,
     )
 
 
 def cmd_check(chat_id: int, args: list[str]) -> None:
     if not args:
-        send_message("اینجوری بزن: <code>/check &lt;site&gt;</code>", chat_id=chat_id)
+        send_message("استفاده: <code>/check &lt;site&gt;</code>", chat_id=chat_id)
         return
     cfg = _site_or_reply(args[0], chat_id)
     if cfg is None:
@@ -275,16 +261,13 @@ def cmd_check(chat_id: int, args: list[str]) -> None:
     state = load_site_state(cfg.site_id)
     if not state.active:
         send_message(
-            f"⚠️ <b>{cfg.name}</b> الان خوابیده. اول بیدارش کن: <code>/watch {cfg.site_id}</code>",
+            f"⚠️ <b>{cfg.name}</b> الان paused هست. اول <code>/watch {cfg.site_id}</code>.",
             chat_id=chat_id,
         )
         return
     state.force_check_pending = True
     save_site_state(cfg.site_id, state)
-    send_message(
-        f"📋 تو ران بعدی <b>{cfg.name}</b> رو دوباره چک می‌کنم.",
-        chat_id=chat_id,
-    )
+    send_message(f"📋 در ران بعدی <b>{cfg.name}</b> چک می‌شه.", chat_id=chat_id)
 
 
 COMMANDS: dict[str, Callable[[int, list[str]], None]] = {
@@ -314,32 +297,32 @@ def _handle_callback(cb: dict[str, Any]) -> None:
     from_user_id = cb.get("from", {}).get("id")
 
     if not _is_authorized(from_user_id):
-        answer_callback(cb_id, "اجازه نداری")
+        answer_callback(cb_id, "Not authorized")
         return
 
     if ":" not in data:
-        answer_callback(cb_id, "نامعتبر")
+        answer_callback(cb_id, "Invalid")
         return
 
     action, _, site_id = data.partition(":")
     cfg = load_site(site_id)
     if cfg is None:
-        answer_callback(cb_id, "این سایت رو نمی‌شناسم")
+        answer_callback(cb_id, "سایت ناشناخته")
         return
 
     state = load_site_state(site_id)
 
     if action == "pause":
-        # First tap on the "✅ قرار گرفتم" button under a notification → ask confirmation
+        # First tap on the "✅ گرفتم" button under a notification → ask confirmation
         confirm_kb = {
             "inline_keyboard": [[
-                {"text": "✅ آره، تموم", "callback_data": f"pause_yes:{site_id}"},
-                {"text": "↩ نه، ادامه بده", "callback_data": f"pause_no:{site_id}"},
+                {"text": "✅ بله، خاموش کن", "callback_data": f"pause_yes:{site_id}"},
+                {"text": "❌ خیر، ادامه بده", "callback_data": f"pause_no:{site_id}"},
             ]]
         }
         # Preserve original message text, add a question
         orig_text = message.get("text") or message.get("caption") or cfg.name
-        new_text = orig_text + f"\n\n🤔 پس قرار <b>{cfg.name}</b> رو گرفتی؟"
+        new_text = orig_text + f"\n\n❓ مطمئنی قرار <b>{cfg.name}</b> رو گرفتی؟"
         edit_message_text(chat_id, message_id, new_text, reply_markup=confirm_kb)
         answer_callback(cb_id)
 
@@ -349,30 +332,30 @@ def _handle_callback(cb: dict[str, Any]) -> None:
         orig_text = message.get("text") or cfg.name
         edit_message_text(
             chat_id, message_id,
-            orig_text + f"\n\n⏸ تمام. هر وقت خواستی دوباره شروع کنم: <code>/watch {site_id}</code>",
+            orig_text + f"\n\n⏸ <b>{cfg.name}</b> خاموش شد. برای فعال‌سازی: <code>/watch {site_id}</code>",
             reply_markup=None,
         )
-        answer_callback(cb_id, "✅ تمام")
+        answer_callback(cb_id, "✅ خاموش شد")
 
     elif action == "pause_no":
         orig_text = message.get("text") or cfg.name
         edit_message_text(
             chat_id, message_id,
-            orig_text + "\n\n👀 باشه، ادامه می‌دم.",
+            orig_text + "\n\n✅ ادامه می‌دم.",
             reply_markup=None,
         )
         answer_callback(cb_id, "ادامه می‌دم")
 
     elif action == "check":
         if not state.active:
-            answer_callback(cb_id, "⚠️ این سایت خوابیده")
+            answer_callback(cb_id, "⚠️ این سایت paused هست")
             return
         state.force_check_pending = True
         save_site_state(site_id, state)
-        answer_callback(cb_id, "📋 تو ران بعدی چک می‌کنم")
+        answer_callback(cb_id, "📋 در ران بعدی چک می‌شه")
 
     else:
-        answer_callback(cb_id, "این دکمه رو نمی‌شناسم")
+        answer_callback(cb_id, "ناشناخته")
 
 
 # -----------------------------------------------------------------------------
@@ -390,7 +373,7 @@ def _handle_message(msg: dict[str, Any]) -> None:
         return
 
     if not text.startswith("/"):
-        send_message("متوجه نشدم. /help رو بزن تا ببینی چی بلدم.", chat_id=chat_id)
+        send_message("دستوری نفهمیدم. /help", chat_id=chat_id)
         return
 
     # Strip @botname suffix if present (Telegram appends it in group chats)
@@ -400,6 +383,34 @@ def _handle_message(msg: dict[str, Any]) -> None:
 
     handler = COMMANDS.get(cmd)
     if handler is None:
-        send_message(
-            f"این دستور رو نمی‌شناسم: <code>{cmd}</code>\n"
-          
+        send_message(f"دستور ناشناخته: <code>{cmd}</code>\n/help", chat_id=chat_id)
+        return
+
+    try:
+        handler(chat_id, args)
+    except Exception:
+        log.exception(f"Handler {cmd} crashed")
+        send_message(f"❌ خطا در پردازش <code>{cmd}</code>. لاگ Actions رو ببین.", chat_id=chat_id)
+
+
+def process_pending_updates() -> int:
+    """Pull all queued Telegram updates and dispatch them. Returns count processed."""
+    offset = load_telegram_offset()
+    updates = get_updates(offset + 1 if offset else 0)
+    log.info(f"Telegram updates pending: {len(updates)} (offset={offset})")
+
+    max_id = offset
+    for upd in updates:
+        upd_id = int(upd.get("update_id", 0))
+        max_id = max(max_id, upd_id)
+        try:
+            if "message" in upd:
+                _handle_message(upd["message"])
+            elif "callback_query" in upd:
+                _handle_callback(upd["callback_query"])
+        except Exception:
+            log.exception(f"Failed to handle update {upd_id}")
+
+    if max_id != offset:
+        save_telegram_offset(max_id)
+    return len(updates)
