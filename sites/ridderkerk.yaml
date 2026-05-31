@@ -1,0 +1,56 @@
+# =============================================================================
+# Ridderkerk - Rijbewijs aanvragen/verlengen
+# =============================================================================
+# Voor het toevoegen van een nieuwe site, kopieer dit bestand en pas aan.
+# Geen Python-code aanpassen nodig!
+
+name: "Ridderkerk Rijbewijs"
+url: "https://ridderkerk.mijnafspraakmaken.nl/?product=49"
+
+# Hoe vaak retry bij browser crash
+max_retries: 3
+
+# Browser navigatie stappen (in volgorde uitgevoerd)
+steps:
+  - action: goto
+    wait_until: domcontentloaded
+    timeout: 60000
+  - action: wait
+    duration: 2000
+  - action: click
+    selector: "button:has-text('Ga naar stap 2')"
+    timeout: 15000
+  - action: wait_load
+  - action: click
+    selector: "button:has-text('Ga naar stap 3')"
+    timeout: 15000
+  - action: wait_load
+  - action: wait
+    duration: 3000
+
+# Datum-extractie strategieën (volgorde = prioriteit, eerste die werkt wint)
+extract:
+  # 1. Probeer eerst alle <input> velden met een Nederlandse maandnaam
+  - type: input_dutch_date
+  # 2. Fallback: regex over de volledige paginatekst
+  - type: text_regex_dutch_date
+
+# Notificatie regel: stuur Telegram bericht als de gevonden datum
+# eerder is dan dit. Wijzig deze datum naar wens.
+# Format: YYYY-MM-DD
+notify_if_before: "2026-06-09"
+
+# (Optioneel) Stop met loggen "geen wijziging" als datum gelijk blijft
+# om logbestand klein te houden
+quiet_when_unchanged: true
+
+# Telegram bericht template. Beschikbare variabelen:
+# {name}, {date}, {url}, {previous_date}
+message_template: |
+  🟢 <b>Eerder slot beschikbaar!</b>
+
+  📍 <b>{name}</b>
+  📅 Nieuwe datum: <b>{date}</b>
+  📆 Vorige datum: {previous_date}
+
+  👉 <a href="{url}">Klik hier om te boeken</a>
