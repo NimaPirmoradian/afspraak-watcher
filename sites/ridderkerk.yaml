@@ -38,7 +38,7 @@ extract:
 # Notificatie regel: stuur Telegram bericht als de gevonden datum
 # eerder is dan dit. Wijzig deze datum naar wens.
 # Format: YYYY-MM-DD
-notify_if_before: "2026-06-09"
+notify_if_before: "2026-07-09"
 
 # (Optioneel) Stop met loggen "geen wijziging" als datum gelijk blijft
 # om logbestand klein te houden
