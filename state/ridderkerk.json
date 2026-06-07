@@ -3,8 +3,8 @@
   "deadline_override": "2026-06-09",
   "last_seen_date": "2026-06-24",
   "last_notified_date": "2026-06-01",
-  "last_check_utc": "2026-06-07T02:03:30Z",
-  "consecutive_failures": 4,
+  "last_check_utc": "2026-06-07T06:38:43Z",
+  "consecutive_failures": 0,
   "first_notification_sent": true,
   "force_check_pending": false
 }
