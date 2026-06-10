@@ -1,10 +1,10 @@
 {
   "active": true,
   "deadline_override": "2026-06-09",
-  "last_seen_date": "2026-06-10",
+  "last_seen_date": "2026-07-06",
   "last_notified_date": "2026-06-01",
-  "last_check_utc": "2026-06-10T01:56:03Z",
-  "consecutive_failures": 2,
+  "last_check_utc": "2026-06-10T06:11:41Z",
+  "consecutive_failures": 0,
   "first_notification_sent": true,
   "force_check_pending": false
 }
